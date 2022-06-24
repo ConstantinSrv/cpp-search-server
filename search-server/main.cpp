@@ -48,10 +48,10 @@ void TestAddDocument() {
     {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        ASSERT_EQUAL(server.FindTopDocuments("cat in the city"s).size(), 1);
+        ASSERT_EQUAL(server.FindTopDocuments("cat in the city"s).size(), 1u);
     }
 }
-void TestMinusWords() {
+void TestExcludeDocumentsWithMinusWords() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = {1, 2, 3};
@@ -87,7 +87,7 @@ void TestMatchDocument() {
     }
 }
 
-void TestRelevanceOrdering() {
+void TestOrderDocumentsByRelevance() {
     const int doc_id1 = 42;
     const string content1 = "cat in the city"s;
     const int doc_id2 = 43;
@@ -99,9 +99,9 @@ void TestRelevanceOrdering() {
     const vector<int> ratings = {1, 2, 3};
     {
         SearchServer server;
-        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings);
         server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings);
         server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings);
         server.AddDocument(doc_id4, content4, DocumentStatus::ACTUAL, ratings);
         const vector<Document> documents = server.FindTopDocuments("cat in the city");
         ASSERT_EQUAL(documents[0].id, 42);
@@ -111,7 +111,7 @@ void TestRelevanceOrdering() {
     }
 }
 
-void TestRatings() {
+void TestCalculateRatings() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     {
@@ -126,11 +126,11 @@ void TestRatings() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const vector<Document> documents = server.FindTopDocuments("cat in the city");
-        ASSERT_EQUAL(documents[0].rating, 2);
+        ASSERT_EQUAL(documents[0].rating, (1 + 2 + 3) / 3);
     }
 }
 
-void TestTopDocumentsFiltered() {
+void TestFilterTopDocumentsByStatus() {
     const int doc_id = 42;
     const string content = "cat in the city"s;
     const vector<int> ratings = {1, 2, 3};
@@ -140,6 +140,12 @@ void TestTopDocumentsFiltered() {
         const vector<Document> documents = server.FindTopDocuments("cat in the city", DocumentStatus::BANNED);
         ASSERT_EQUAL(documents[0].id, 42);
     }
+}
+
+void TestFilterTopDocumentsByPredicate() {
+    const int doc_id = 42;
+    const string content = "cat in the city"s;
+    const vector<int> ratings = {1, 2, 3};
     {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::BANNED, ratings);
@@ -154,7 +160,7 @@ void TestTopDocumentsFiltered() {
     }
 }
 
-void TestRelevance() {
+void TestCalculateRelevance() {
     const double DEVIATION = 1e-6;
     const int doc_id1 = 42;
     const string content1 = "cat in the city"s;
@@ -190,12 +196,13 @@ void TestSearchServer() {
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     // Не забудьте вызывать остальные тесты здесь
     RUN_TEST(TestAddDocument);
-    RUN_TEST(TestMinusWords);
+    RUN_TEST(TestExcludeDocumentsWithMinusWords);
     RUN_TEST(TestMatchDocument);
-    RUN_TEST(TestRelevanceOrdering);
-    RUN_TEST(TestRatings);
-    RUN_TEST(TestTopDocumentsFiltered);
-    RUN_TEST(TestRelevance);
+    RUN_TEST(TestOrderDocumentsByRelevance);
+    RUN_TEST(TestCalculateRatings);
+    RUN_TEST(TestFilterTopDocumentsByStatus);
+    RUN_TEST(TestFilterTopDocumentsByPredicate);
+    RUN_TEST(TestCalculateRelevance);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
