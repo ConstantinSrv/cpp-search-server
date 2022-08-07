@@ -4,6 +4,7 @@
 #include "string_processing.h"
 #include <algorithm>
 #include <cmath>
+#include <execution>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -38,8 +39,14 @@ public:
     std::set<int>::iterator end();
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
     void RemoveDocument(int document_id);
+    void RemoveDocument(std::execution::sequenced_policy policy, int document_id);
+    void RemoveDocument(std::execution::parallel_policy policy, int document_id);
  
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
+                                                        int document_id) const;
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(std::execution::sequenced_policy policy, const std::string& raw_query,
+                                                        int document_id) const;
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(std::execution::parallel_policy policy, const std::string& raw_query,
                                                         int document_id) const;
 private:
     struct DocumentData {
@@ -69,7 +76,14 @@ private:
         std::set<std::string> plus_words;
         std::set<std::string> minus_words;
     };
+
+    struct QueryParallel {
+        std::vector<std::string> plus_words;
+        std::vector<std::string> minus_words;
+    };
+
     Query ParseQuery(const std::string& text) const;
+    QueryParallel ParseQueryParallel(const std::string& text) const;
     // Existence required
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
  
