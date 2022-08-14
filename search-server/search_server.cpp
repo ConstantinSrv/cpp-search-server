@@ -36,30 +36,26 @@ void SearchServer::AddDocument(int document_id, const string &document, Document
     }
     const auto words = SplitIntoWordsNoStop(document);
     const double inv_word_count = 1.0 / words.size();
+
+    vector<string> data;
     for (const string_view word : words)
     {
-        word_to_document_freqs_[std::string(word)][document_id] += inv_word_count;
-        document_to_word_freqs_[document_id][std::string(word)] += inv_word_count;
+        data.emplace_back(string(word));
     }
-    documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
+
+    documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status, move(data)});
+
+    for (const string_view word : documents_[document_id].data)
+    {
+        word_to_document_freqs_[word][document_id] += inv_word_count;
+        document_to_word_freqs_[document_id][word] += inv_word_count;
+    }
     document_ids_.insert(document_id);
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string_view raw_query, DocumentStatus status) const
 {
-    return FindTopDocuments(
-        raw_query, [status](int document_id, DocumentStatus document_status, int rating)
-        { return document_status == status; });
-}
-
-std::vector<Document> SearchServer::FindTopDocuments(const std::execution::sequenced_policy &policy, const std::string_view raw_query, DocumentStatus status) const
-{
-    return FindTopDocuments(raw_query, status);
-}
-
-std::vector<Document> SearchServer::FindTopDocuments(const std::execution::parallel_policy &policy, const std::string_view raw_query, DocumentStatus status) const
-{
-    return FindTopDocuments(policy,
+    return FindTopDocuments(execution::seq,
                             raw_query, [status](int document_id, DocumentStatus document_status, int rating)
                             { return document_status == status; });
 }
@@ -67,18 +63,6 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::execution::paral
 vector<Document> SearchServer::FindTopDocuments(const string_view raw_query) const
 {
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
-}
-
-vector<Document> SearchServer::FindTopDocuments(const std::execution::sequenced_policy &policy, const string_view raw_query) const
-{
-    return FindTopDocuments(raw_query);
-}
-
-vector<Document> SearchServer::FindTopDocuments(const std::execution::parallel_policy &policy, const string_view raw_query) const
-{
-    return FindTopDocuments(policy,
-                            raw_query, [](int document_id, DocumentStatus document_status, int rating)
-                            { return document_status == DocumentStatus::ACTUAL; });
 }
 
 int SearchServer::GetDocumentCount() const
